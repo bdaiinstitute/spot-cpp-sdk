@@ -5,15 +5,17 @@
 # Development Kit License (20191101-BDSDK-SL).
 
 cmake_minimum_required (VERSION 3.10.2)
-project (bosdyn VERSION 3.3.2)
+project (bosdyn VERSION 4.0.0)
 
 # Dependencies:
-find_package(Protobuf CONFIG REQUIRED)
-find_package(Eigen3 CONFIG REQUIRED)
-find_package(gRPC CONFIG REQUIRED)
-find_package(CLI11 CONFIG REQUIRED)
+find_package(protobuf REQUIRED)
+find_package(Eigen3 REQUIRED)
+find_package(gRPC REQUIRED)
+find_package(CLI11 REQUIRED)
 find_package(Threads REQUIRED)
 get_target_property(grpc_cpp_plugin_location gRPC::grpc_cpp_plugin LOCATION)
+
+set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS true)
 
@@ -37,68 +39,67 @@ file(MAKE_DIRECTORY ${protos_OUTPUT_DIR})
 file(GLOB_RECURSE bosdyn_protos_files CONFIGURE_DEPENDS
     RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "${API_protos_PATH}/*.proto")
 
-#only do the compilation once
-add_library(bosdyn_api_obj OBJECT ${bosdyn_protos_files})
-set_property(TARGET bosdyn_api_obj PROPERTY POSITION_INDEPENDENT_CODE 1)
-target_link_libraries(bosdyn_api_obj PUBLIC protobuf::libprotobuf gRPC::grpc gRPC::grpc++)
-target_include_directories(bosdyn_api_obj PUBLIC
-  $<BUILD_INTERFACE:${protos_OUTPUT_DIR}>
-  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
-)
-protobuf_generate(TARGET bosdyn_api_obj LANGUAGE cpp
-  IMPORT_DIRS ${API_protos_PATH} 
+if (bosdyn_protos_files)
+  add_library(bosdyn_api_obj OBJECT ${bosdyn_protos_files})
+  set_property(TARGET bosdyn_api_obj PROPERTY POSITION_INDEPENDENT_CODE 1)
+  target_link_libraries(bosdyn_api_obj PUBLIC ${PROTOBUF_LIBRARIES} gRPC::grpc gRPC::grpc++)
+  target_include_directories(bosdyn_api_obj PUBLIC
+    $<BUILD_INTERFACE:${protos_OUTPUT_DIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  )
+  protobuf_generate(TARGET bosdyn_api_obj LANGUAGE cpp
+  IMPORT_DIRS ${API_protos_PATH}
   PROTOC_OUT_DIR ${protos_OUTPUT_DIR})
-protobuf_generate(TARGET bosdyn_api_obj
-  LANGUAGE grpc GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
-  PLUGIN "protoc-gen-grpc=${grpc_cpp_plugin_location}"
-  IMPORT_DIRS ${API_protos_PATH} 
-  PROTOC_OUT_DIR ${protos_OUTPUT_DIR}
-)
-#set install params
-install(
-  TARGETS bosdyn_api_obj 
-  EXPORT ${PROJECT_NAME}Targets 
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-
-# actually make some libraries
-if (BUILD_SHARED_LIBS)
-  add_library(bosdyn_api SHARED $<TARGET_OBJECTS:bosdyn_api_obj>)
-  target_link_libraries(bosdyn_api INTERFACE bosdyn_api_obj)
+  protobuf_generate(TARGET bosdyn_api_obj
+    LANGUAGE grpc GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
+    PLUGIN "protoc-gen-grpc=${grpc_cpp_plugin_location}"
+    IMPORT_DIRS ${API_protos_PATH}
+    PROTOC_OUT_DIR ${protos_OUTPUT_DIR}
+  )
+  #set install params
   install(
-    TARGETS bosdyn_api 
+    TARGETS bosdyn_api_obj 
     EXPORT ${PROJECT_NAME}Targets 
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )
+
+  if (BUILD_SHARED_LIBS)
+    add_library(bosdyn_api SHARED $<TARGET_OBJECTS:bosdyn_api_obj>)
+    target_link_libraries(bosdyn_api INTERFACE bosdyn_api_obj)
+    install(
+      TARGETS bosdyn_api
+      EXPORT ${PROJECT_NAME}Targets
+      LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+      INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    )
+  endif()
+  add_library(bosdyn_api_static STATIC $<TARGET_OBJECTS:bosdyn_api_obj>)
+  target_link_libraries(bosdyn_api_static INTERFACE bosdyn_api_obj)
+  install(
+    TARGETS bosdyn_api_static 
+    EXPORT ${PROJECT_NAME}Targets 
+    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  )
+  # install the gnerated protobuf and grpc header files
+  install(DIRECTORY ${protos_OUTPUT_DIR}/
+    DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+    FILES_MATCHING PATTERN "*.h"
+  )
 endif()
-
-add_library(bosdyn_api_static STATIC $<TARGET_OBJECTS:bosdyn_api_obj>)
-target_link_libraries(bosdyn_api_static INTERFACE bosdyn_api_obj)
-install(
-  TARGETS bosdyn_api_static 
-  EXPORT ${PROJECT_NAME}Targets 
-  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-)
-
-# install the gnerated protobuf and grpc header files
-install(DIRECTORY ${protos_OUTPUT_DIR}/
-  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  FILES_MATCHING PATTERN "*.h"
-)
-
 if (BUILD_CHOREOGRAPHY_LIBS)
-  ### API choreography_protos LIBRARY ###
-  #find the proto files
-  set(API_choreography_protos_PATH ${CMAKE_CURRENT_SOURCE_DIR}/../choreography_protos/)
-  set(choreography_protos_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/choreography_protos)
-  file(MAKE_DIRECTORY ${choreography_protos_OUTPUT_DIR})
-  file(GLOB_RECURSE bosdyn_choreography_protos_files CONFIGURE_DEPENDS
-      RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "${API_choreography_protos_PATH}/*.proto")
 
-  #only do the compilation once
+### API choreography_protos LIBRARY ###
+set(API_choreography_protos_PATH ${CMAKE_CURRENT_SOURCE_DIR}/build/choreography_protos/)
+# Copy choreography_protos folders to build folder so they are in a subdirectory from the cpp folder (necessary for the proto cpp files generation).
+file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/../choreography_protos/ DESTINATION ${API_choreography_protos_PATH})
+set(choreography_protos_OUTPUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/choreography_protos)
+file(MAKE_DIRECTORY ${choreography_protos_OUTPUT_DIR})
+file(GLOB_RECURSE bosdyn_choreography_protos_files CONFIGURE_DEPENDS
+    RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} "${API_choreography_protos_PATH}/*.proto")
+
+if (bosdyn_choreography_protos_files)
   add_library(bosdyn_choreography_protos_obj OBJECT ${bosdyn_choreography_protos_files})
   set_property(TARGET bosdyn_choreography_protos_obj PROPERTY POSITION_INDEPENDENT_CODE 1)
   target_link_libraries(bosdyn_choreography_protos_obj PUBLIC bosdyn_api)
@@ -107,12 +108,12 @@ if (BUILD_CHOREOGRAPHY_LIBS)
     $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
   )
   protobuf_generate(TARGET bosdyn_choreography_protos_obj LANGUAGE cpp
-    IMPORT_DIRS ${API_choreography_protos_PATH} ${API_protos_PATH} 
-    PROTOC_OUT_DIR ${choreography_protos_OUTPUT_DIR})
+  IMPORT_DIRS ${API_choreography_protos_PATH}
+  PROTOC_OUT_DIR ${choreography_protos_OUTPUT_DIR})
   protobuf_generate(TARGET bosdyn_choreography_protos_obj
     LANGUAGE grpc GENERATE_EXTENSIONS .grpc.pb.h .grpc.pb.cc
     PLUGIN "protoc-gen-grpc=${grpc_cpp_plugin_location}"
-    IMPORT_DIRS ${API_choreography_protos_PATH} ${API_protos_PATH} 
+    IMPORT_DIRS ${API_choreography_protos_PATH}
     PROTOC_OUT_DIR ${choreography_protos_OUTPUT_DIR}
   )
   #set install params
@@ -123,32 +124,30 @@ if (BUILD_CHOREOGRAPHY_LIBS)
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )
 
-  # actually make some libraries
   if (BUILD_SHARED_LIBS)
     add_library(bosdyn_choreography_protos SHARED $<TARGET_OBJECTS:bosdyn_choreography_protos_obj>)
     target_link_libraries(bosdyn_choreography_protos INTERFACE bosdyn_choreography_protos_obj)
     install(
-      TARGETS bosdyn_choreography_protos 
-      EXPORT ${PROJECT_NAME}Targets 
+      TARGETS bosdyn_choreography_protos
+      EXPORT ${PROJECT_NAME}Targets
       LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
       INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     )
   endif()
-
   add_library(bosdyn_choreography_protos_static STATIC $<TARGET_OBJECTS:bosdyn_choreography_protos_obj>)
-  target_link_libraries(bosdyn_choreography_protos_static PUBLIC bosdyn_choreography_protos_obj)
+  target_link_libraries(bosdyn_choreography_protos_static INTERFACE bosdyn_choreography_protos_obj)
   install(
     TARGETS bosdyn_choreography_protos_static 
     EXPORT ${PROJECT_NAME}Targets 
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )
-
   # install the gnerated protobuf and grpc header files
   install(DIRECTORY ${choreography_protos_OUTPUT_DIR}/
     DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
     FILES_MATCHING PATTERN "*.h"
   )
+endif()
 endif()
 
 
@@ -171,24 +170,41 @@ install(
 )
 # actually make some libraries
 if (BUILD_SHARED_LIBS)
-  add_library (bosdyn_client SHARED $<TARGET_OBJECTS:bosdyn_client_obj>)
-  target_link_libraries(bosdyn_client PUBLIC bosdyn_client_obj)
+  add_library (bosdyn_client SHARED ${bosdyn_client_SRC})
+  set_property(TARGET bosdyn_client PROPERTY POSITION_INDEPENDENT_CODE 1)
+  target_compile_features(bosdyn_client PUBLIC cxx_std_17)
+  target_link_libraries(bosdyn_client PUBLIC bosdyn_api Eigen3::Eigen)
+  target_include_directories(bosdyn_client PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+  )
   install(
-    TARGETS bosdyn_client 
-    EXPORT ${PROJECT_NAME}Targets 
+    TARGETS bosdyn_client
+    EXPORT ${PROJECT_NAME}Targets
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
   )
 endif()
 
 add_library (bosdyn_client_static STATIC ${bosdyn_client_SRC})
-target_link_libraries(bosdyn_client_static PUBLIC bosdyn_client_obj)
+set_property(TARGET bosdyn_client_static PROPERTY POSITION_INDEPENDENT_CODE 1)
+target_compile_features(bosdyn_client_static PUBLIC cxx_std_17)
+target_link_libraries(bosdyn_client_static PUBLIC bosdyn_api_static Eigen3::Eigen)
+target_include_directories(bosdyn_client_static PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
+  $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>
+)
 install(
-    TARGETS bosdyn_client_static
-    EXPORT ${PROJECT_NAME}Targets 
-    LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-  )
+  TARGETS bosdyn_client_static
+  EXPORT ${PROJECT_NAME}Targets
+  LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
+  INCLUDES DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+)
+#extract the header files from the src dir and install them
+install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bosdyn
+  DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+  FILES_MATCHING PATTERN "*.h"
+)
 
 #extract the header files from the src dir and install them
 install(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/bosdyn 
@@ -216,34 +232,62 @@ target_include_directories(basic_robot_command PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${PROTOBUF_INCLUDE_DIR}
 )
+add_executable(arm_grasp_carry_overrides ${CMAKE_CURRENT_SOURCE_DIR}/examples/arm_grasp_carry_overrides/arm_grasp_carry_overrides.cpp)
+target_compile_features(arm_grasp_carry_overrides PUBLIC cxx_std_17)
+target_include_directories(arm_grasp_carry_overrides PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${PROTOBUF_INCLUDE_DIR}
+)
+target_link_libraries(arm_grasp_carry_overrides PUBLIC bosdyn_client_static)
+install(TARGETS arm_grasp_carry_overrides DESTINATION ${CMAKE_INSTALL_BINDIR})
+add_executable(arm_manipulation_api_walk_to ${CMAKE_CURRENT_SOURCE_DIR}/examples/arm_manipulation_api_walk_to/arm_manipulation_api_walk_to.cpp)
+target_compile_features(arm_manipulation_api_walk_to PUBLIC cxx_std_17)
+target_include_directories(arm_manipulation_api_walk_to PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${PROTOBUF_INCLUDE_DIR}
+)
+target_link_libraries(arm_manipulation_api_walk_to PUBLIC bosdyn_client_static)
+install(TARGETS arm_manipulation_api_walk_to DESTINATION ${CMAKE_INSTALL_BINDIR})
+add_executable(basic_robot_command ${CMAKE_CURRENT_SOURCE_DIR}/examples/basic_robot_command/basic_robot_command.cpp)
+target_compile_features(basic_robot_command PUBLIC cxx_std_17)
+target_include_directories(basic_robot_command PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${PROTOBUF_INCLUDE_DIR}
+)
 target_link_libraries(basic_robot_command PUBLIC bosdyn_client_static)
 install(TARGETS basic_robot_command DESTINATION ${CMAKE_INSTALL_BINDIR})
-
 add_executable(get_image ${CMAKE_CURRENT_SOURCE_DIR}/examples/get_image/get_image.cpp)
-target_compile_features(get_image PUBLIC cxx_std_14)
-target_link_libraries(get_image PUBLIC bosdyn_client_static CLI11::CLI11)
+target_compile_features(get_image PUBLIC cxx_std_17)
+target_include_directories(get_image PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${PROTOBUF_INCLUDE_DIR}
+)
+target_link_libraries(get_image PUBLIC bosdyn_client_static)
 install(TARGETS get_image DESTINATION ${CMAKE_INSTALL_BINDIR})
-
+add_executable(hello_spot ${CMAKE_CURRENT_SOURCE_DIR}/examples/hello_spot/hello_spot.cpp)
+target_compile_features(hello_spot PUBLIC cxx_std_17)
+target_include_directories(hello_spot PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${PROTOBUF_INCLUDE_DIR}
+)
+target_link_libraries(hello_spot PUBLIC bosdyn_client_static)
+install(TARGETS hello_spot DESTINATION ${CMAKE_INSTALL_BINDIR})
+add_executable(inverse_kinematics_reachability ${CMAKE_CURRENT_SOURCE_DIR}/examples/inverse_kinematics_reachability/inverse_kinematics_reachability.cpp)
+target_compile_features(inverse_kinematics_reachability PUBLIC cxx_std_17)
+target_include_directories(inverse_kinematics_reachability PUBLIC
+  ${CMAKE_CURRENT_SOURCE_DIR}
+  ${PROTOBUF_INCLUDE_DIR}
+)
+target_link_libraries(inverse_kinematics_reachability PUBLIC bosdyn_client_static)
+install(TARGETS inverse_kinematics_reachability DESTINATION ${CMAKE_INSTALL_BINDIR})
 add_executable(spot_cam ${CMAKE_CURRENT_SOURCE_DIR}/examples/spot_cam/ptz_example.cpp)
-target_compile_features(spot_cam PUBLIC cxx_std_14)
+target_compile_features(spot_cam PUBLIC cxx_std_17)
 target_include_directories(spot_cam PUBLIC
   ${CMAKE_CURRENT_SOURCE_DIR}
   ${PROTOBUF_INCLUDE_DIR}
 )
-
-target_link_libraries(spot_cam PUBLIC bosdyn_client_static CLI11::CLI11)
-install(TARGETS spot_cam RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-
-add_executable(hello_spot ${CMAKE_CURRENT_SOURCE_DIR}/examples/hello_spot/hello_spot.cpp)
-target_compile_features(hello_spot PUBLIC cxx_std_14)
-target_link_libraries(hello_spot PUBLIC bosdyn_client_static CLI11::CLI11)
-install(TARGETS hello_spot RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-
-add_executable(inverse_kinematics_reachability ${CMAKE_CURRENT_SOURCE_DIR}/examples/inverse_kinematics_reachability/inverse_kinematics_reachability.cpp)
-target_compile_features(inverse_kinematics_reachability PUBLIC cxx_std_14)
-target_link_libraries(inverse_kinematics_reachability PUBLIC bosdyn_client_static CLI11::CLI11)
-install(TARGETS inverse_kinematics_reachability DESTINATION ${CMAKE_INSTALL_BINDIR})
-
+target_link_libraries(spot_cam PUBLIC bosdyn_client_static)
+install(TARGETS spot_cam DESTINATION ${CMAKE_INSTALL_BINDIR})
 # Save a version file in the project's binary directory
 include(CMakePackageConfigHelpers)
 set(VERSION_FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}ConfigVersion.cmake")
@@ -256,10 +300,10 @@ write_basic_package_version_file("${VERSION_FILE}"
 set(PROJECT_CONFIG_PATH "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
 set(EXPORTS_FILE "UseInstall${PROJECT_NAME}.cmake")
 install(
-    EXPORT ${PROJECT_NAME}Targets
-    NAMESPACE ${PROJECT_NAME}::
-    FILE ${EXPORTS_FILE}
-    DESTINATION ${PROJECT_CONFIG_PATH}
+  EXPORT ${PROJECT_NAME}Targets
+  NAMESPACE ${PROJECT_NAME}::
+  FILE ${EXPORTS_FILE}
+  DESTINATION ${PROJECT_CONFIG_PATH}
 )
 
 # Define Variables needed by package config file
@@ -267,7 +311,7 @@ set(PACKAGE_INSTALL_PREFIX /opt/spot-cpp-sdk)
 set(DEP_INSTALL_PATH ${PACKAGE_INSTALL_PREFIX}/external)
 
 #this generates a relocatable config file for install, but it gets invoked at build time,
-#so the output has to be saved in a way that won't conflict with the export config
+#so the output has to be saved in a way that will not conflict with the export config
 set(CONFIG_FILE "${CMAKE_CURRENT_BINARY_DIR}/${PROJECT_NAME}InstallConfig.cmake")
 
 configure_package_config_file( "cmake/ProjectConfig.cmake.in"
@@ -276,9 +320,9 @@ configure_package_config_file( "cmake/ProjectConfig.cmake.in"
 )
 #and because the config is a file in the build dir, it has to be installed explicitly
 install(
-    FILES "${CONFIG_FILE}"
-    RENAME ${PROJECT_NAME}Config.cmake
-    DESTINATION "${PROJECT_CONFIG_PATH}"
+  FILES "${CONFIG_FILE}"
+  RENAME ${PROJECT_NAME}Config.cmake
+  DESTINATION "${PROJECT_CONFIG_PATH}"
 )
 
 set(EXPORTS_FILE "UseExport${PROJECT_NAME}.cmake")
@@ -296,27 +340,23 @@ ${PROJECT_NAME}Config.cmake
   INSTALL_DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
   INSTALL_PREFIX ${CMAKE_CURRENT_BINARY_DIR}
 )
-
 # Stick build location in the central CMake user package registry, so that
 # it may be easily found.
-message(STATUS "Location of this build will be exported. Set ENABLE_EXPORT to OFF if you don't want this and delete ~/.cmake/projects/${PROJECT_NAME} ")
+message(STATUS "Location of this build will be exported. Set ENABLE_EXPORT to OFF if you do not want this and delete ~/.cmake/projects/${PROJECT_NAME} ")
 export(PACKAGE ${PROJECT_NAME})
-
 
 if (UNIX)
   # Packaging logic
   set(CPACK_GENERATOR "DEB")
   set(CPACK_PACKAGE_NAME "spot-cpp-sdk")
   set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
-  set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Anthony Baker <ABaker@theaiinstitute.com>")
+  set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Boston Dynamics SDK Publisher <bd-sdk-publisher@bostondynamics.com>")
   set(CPACK_PACKAGE_VENDOR "Boston Dynamics")
   set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Your package description here.")
-  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Boston Dynamics' Spot C++ SDK")
+  set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Boston Dynamics Spot C++ SDK")
   set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/../LICENSE")
   set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
   set(CPACK_PACKAGING_INSTALL_PREFIX "${PACKAGE_INSTALL_PREFIX}")
   set(CPACK_INSTALLED_DIRECTORIES "${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/;${DEP_INSTALL_PATH}/")
-
   include(CPack)
 endif()
