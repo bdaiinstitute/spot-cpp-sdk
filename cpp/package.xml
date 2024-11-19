@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>bosdyn</name>
+  <version>4.1.0</version>
+  <description>Boston Dynamics Spot C++ SDK</description>
+  <maintainer email="engineering@theaiinstitute.com">BD AI Institute</maintainer>
+  <license>BDSDK-L</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+  <buildtool_depend>ament_cmake_python</buildtool_depend>
+
+  <depend>cli11</depend>
+  <depend>eigen</depend>
+  <depend>libgrpc</depend>
+  <depend>protobuf</depend>
+  <depend>protobuf-dev</depend>
+  <depend>protobuf-compiler-grpc</depend>
+
+  <export>
+    <build_type>cmake</build_type>
+  </export>
+</package>
