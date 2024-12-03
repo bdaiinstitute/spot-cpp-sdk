@@ -1,0 +1,38 @@
+name: Spot C++ SDK CI
+
+on:
+  pull_request:
+    branches:
+      - ros2
+  push:
+    branches:
+      - ros2 
+
+defaults:
+  run:
+    shell: bash
+
+concurrency:
+  group: ${{ github.repository }}-${{ github.workflow }}-${{ github.ref }}-${{ github.ref == 'refs/heads/ros2' && github.sha || ''}}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build Spot C++ SDK package
+    runs-on: ubuntu-latest
+    container:
+      image: ros:humble-ros-base
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          apt-get update
+          rosdep update
+          rosdep install -i -y --from-path cpp
+
+      - name: Build package
+        run: |
+          source /opt/ros/humble/setup.bash
+          colcon build --symlink-install
