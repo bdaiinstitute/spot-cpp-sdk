@@ -8,7 +8,7 @@ Development Kit License (20191101-BDSDK-SL).
 
 # Spot C++ SDK (BETA) in ROS 2
 
-**This is fork of [`boston-dynamics/spot-cpp-sdk`](https://github.com/boston-dynamics/spot-cpp-sdk) patched for ROS 2 release. Proceed upstream for any inquiry or request.**
+**This is a fork of [`boston-dynamics/spot-cpp-sdk`](https://github.com/boston-dynamics/spot-cpp-sdk) patched for ROS 2 release. Proceed upstream for any inquiry or request.**
 
 Develop applications and payloads for Spot using the Boston Dynamics Spot C++ SDK. The Spot C++ SDK is a **beta** release.
 
