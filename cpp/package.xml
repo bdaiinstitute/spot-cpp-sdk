@@ -4,7 +4,7 @@
   <name>bosdyn</name>
   <version>4.1.0</version>
   <description>Boston Dynamics Spot C++ SDK</description>
-  <maintainer email="engineering@theaiinstitute.com">BD AI Institute</maintainer>
+  <maintainer email="opensource@theaiinstitute.com">Boston Dynamics AI Institute</maintainer>
   <license>BDSDK-L</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>

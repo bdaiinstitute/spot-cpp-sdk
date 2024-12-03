@@ -28,6 +28,6 @@ Library Dependencies:
 
 ## Contents
 
-- [Client](bosdyn/client/README.md)
-- [Common](bosdyn/common/README.md)
-- [Math](bosdyn/math/README.md)
+- [Client](https://github.com/bdaiinstitute/spot-cpp-sdk/tree/ros2/cpp/bosdyn/client)
+- [Common](https://github.com/bdaiinstitute/spot-cpp-sdk/tree/ros2/cpp/bosdyn/common)
+- [Math](https://github.com/bdaiinstitute/spot-cpp-sdk/tree/ros2/cpp/bosdyn/math)
