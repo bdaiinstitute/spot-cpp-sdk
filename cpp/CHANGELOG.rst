@@ -2,8 +2,8 @@
 Changelog for package bosdyn
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Forthcoming
------------
+4.1.0 (2024-12-03)
+------------------
 * Prepare for ROS 2 release (`#10 <https://github.com/bdaiinstitute/spot-cpp-sdk/issues/10>`_)
 * Patch for ROS 2 release (`#9 <https://github.com/bdaiinstitute/spot-cpp-sdk/issues/9>`_)
 * Add Protobuf dev libraries to Spot C++ SDK debian deps (`#8 <https://github.com/bdaiinstitute/spot-cpp-sdk/issues/8>`_)
@@ -11,18 +11,12 @@ Forthcoming
 * Add gRPC dev libraries to Spot C++ SDK debian deps (`#6 <https://github.com/bdaiinstitute/spot-cpp-sdk/issues/6>`_)
 * Add dependencies to Spot C++ SDK debians (`#5 <https://github.com/bdaiinstitute/spot-cpp-sdk/issues/5>`_)
 * Update devcontainers for building debians (`#4 <https://github.com/bdaiinstitute/spot-cpp-sdk/issues/4>`_)
-* Contributors: Andrew Messing, Michel Hidalgo
-
-4.1.0 (2024-09-25)
-------------------
-* Merge branch 'boston-dynamics:master' into master
 * Release v4.1.0 of Boston Dynamics Spot SDK
 * Release v4.0.3 of Boston Dynamics Spot SDK
-* Contributors: Andrew Messing, Boston Dynamics SDK Publisher
+* Contributors: Andrew Messing, Boston Dynamics SDK Publisher, Michel Hidalgo
 
 4.0.2 (2024-06-05)
 ------------------
-* Merge branch 'boston-dynamics:master' into master
 * Release v4.0.2 of Boston Dynamics Spot SDK
 * Added CD GHA
 * Contributors: Andrew Messing, Boston Dynamics SDK Publisher
