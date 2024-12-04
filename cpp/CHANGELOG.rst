@@ -12,8 +12,12 @@ Changelog for package bosdyn
 * Add dependencies to Spot C++ SDK debians (`#5 <https://github.com/bdaiinstitute/spot-cpp-sdk/issues/5>`_)
 * Update devcontainers for building debians (`#4 <https://github.com/bdaiinstitute/spot-cpp-sdk/issues/4>`_)
 * Release v4.1.0 of Boston Dynamics Spot SDK
-* Release v4.0.3 of Boston Dynamics Spot SDK
 * Contributors: Andrew Messing, Boston Dynamics SDK Publisher, Michel Hidalgo
+
+4.0.3 (2024-06-15)
+------------------
+* Release v4.0.3 of Boston Dynamics Spot SDK
+* Contributors: Boston Dynamics SDK Publisher
 
 4.0.2 (2024-06-05)
 ------------------
@@ -26,9 +30,6 @@ Changelog for package bosdyn
 * Added CD GHA
 * Release v4.0.0 of Boston Dynamics Spot SDK
 * Contributors: Andrew Messing, Boston Dynamics SDK Publisher
-
-4.0.0 (2024-02-12)
-------------------
 
 3.3.2 (2023-09-18)
 ------------------
